@@ -89,8 +89,8 @@ void send_job(worker_t *worker, uint64_t trial, int job_id){
     job.trials = trial;
     job.job_id = job_id;
 
-    if(write_full(worker ->to_worker_fd,&job,sizeof(job)) <=0){
-        fprintf(stderr,"failure to write job");
+    if (write_full(worker->to_worker_fd, &job, sizeof(job)) != (ssize_t)sizeof(job)) {
+        fprintf(stderr, "failure to write job\n");
         exit(1);
     }
 }
@@ -102,8 +102,8 @@ void send_shutdown(worker_t *worker){
     job.trials = 0;
     job.random_seed = 0;
 
-    if(write_full(worker ->to_worker_fd,&job,sizeof(job)) <=0){
-        fprintf(stderr,"failure to shutdown");
+    if (write_full(worker->to_worker_fd, &job, sizeof(job)) != (ssize_t)sizeof(job)) {
+        fprintf(stderr, "failure to shutdown\n");
         exit(1);
     }
     
