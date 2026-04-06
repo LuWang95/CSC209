@@ -1,4 +1,3 @@
-# CSC209
 # CSC209 Project: Parallel Monte Carlo π Estimator
 
 ## 1. Overview
