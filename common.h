@@ -11,19 +11,19 @@ typedef enum{
 } job_type_t;
 
 typedef struct 
-{
+{  job_type_t type;
     int worker_id;
     int chunk_id;
-    u_int64_t trials;
-    u_int32_t random_seed;
+    uint64_t trials;
+    uint32_t random_seed;
 } job_msg_type;
 
 typedef struct
 {
     int worker_id;
     int chunk_id;
-    u_int64_t trials_done;
-    u_int64_t count;
+    uint64_t trials_done;
+    uint64_t count;
 } result_msg_type;
 
 typedef struct {
