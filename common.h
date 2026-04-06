@@ -24,7 +24,14 @@ typedef struct
     int chunk_id;
     u_int64_t trials_done;
     u_int64_t count;
-};
+} result_msg_type;
+
+typedef struct {
+    int id;
+    pid_t pid;
+    int to_worker_fd;
+    int from_worker_fd;
+} worker_t;
 
 ssize_t read_full(int fd, void *buf, size_t count);
 ssize_t write_full(int fd, const void *buf,size_t count);
