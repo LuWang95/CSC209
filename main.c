@@ -25,7 +25,7 @@ user_input parse_args(int argc,char* argv[]){
     input.trial_number = strtoull(argv[2], NULL, 10);
     input.chunk_size = strtoull(argv[3], NULL, 10);
     if(input.num_workers <=0 || input.chunk_size <=0 || input.trial_number<=0){
-        fprintf(stderr,"Invalid Input");
+        fprintf(stderr,"Invalid Input\n");
         exit(1);
     }
     return input;
