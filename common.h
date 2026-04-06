@@ -1,9 +1,9 @@
-#ifndef COMMON
-#define COMMON
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <sys/types.h>
 #include <stdint.h>
-
+#include <stddef.h>
 
 typedef enum{
     msg_job = 1,
@@ -12,8 +12,7 @@ typedef enum{
 
 typedef struct 
 {   job_type_t type;
-    int worker_id;
-    int chunk_id;
+    int job_id;
     uint64_t trials;
     uint32_t random_seed;
 } job_msg_type;
@@ -21,7 +20,6 @@ typedef struct
 typedef struct
 {
     int worker_id;
-    int chunk_id;
     uint64_t trials_done;
     uint64_t count;
 } result_msg_type;

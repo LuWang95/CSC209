@@ -72,8 +72,7 @@ void worker_loop(int read_fd, int write_fd, int worker_id) {
         uint64_t inside = count_inside_circle(job.trials, job.random_seed);
 
         // package result to send back
-        result.worker_id = worker_id;      
-        result.chunk_id = job.chunk_id;    
+        result.worker_id = worker_id;         
         result.trials_done = job.trials;   
         result.count = inside;            
 
