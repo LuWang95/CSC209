@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include<sys/select.h>
+#include <sys/select.h>
+#include <sys/wait.h>
 #include "worker.h"
 #include "common.h"
 typedef struct 
@@ -141,11 +142,12 @@ int collect_one_result(worker_t *workers,int n, result_msg_type *out){
 }
 
 
-double run_simulation(worker_t *workers,user_input *input){
+double run_simulation(worker_t *workers, user_input *input, int *next_job_io,
+                      uint64_t *cumulative_count, uint64_t *cumulative_trials) {
     uint64_t trials_sent = 0;
     uint64_t trials_done = 0;
-    int next_job = 0;
-    uint64_t global_count = 0;
+    int next_job = *next_job_io;
+    uint64_t round_count = 0;
     for(int i = 0; i < input->num_workers && trials_sent < input->trial_number; i++){
         uint64_t chunk = input ->chunk_size;
         uint64_t remaining = input ->trial_number - trials_sent;
@@ -162,7 +164,7 @@ double run_simulation(worker_t *workers,user_input *input){
         int worker_id;
         worker_id = collect_one_result(workers,input->num_workers,&one_result);
         trials_done += one_result.trials_done;
-        global_count += one_result.count;
+        round_count += one_result.count;
         
         if (trials_sent < input -> trial_number)
         {
@@ -171,7 +173,8 @@ double run_simulation(worker_t *workers,user_input *input){
             if(chunk > remaining){
                 chunk = remaining;
             }
-            printf("Worker %d finished previous job, sending chunk %d to the worker right now. Remaining trials is  %lld\n.",worker_id,next_job,remaining);
+            printf("Worker %d finished previous job, sending chunk %d to the worker right now. Remaining trials is  %llu\n.",
+                   worker_id, next_job, (unsigned long long)remaining);
             send_job(&workers[worker_id],chunk,next_job);
             trials_sent += chunk;
             next_job ++;
@@ -180,13 +183,20 @@ double run_simulation(worker_t *workers,user_input *input){
 
     for (int i = 0; i < input->num_workers; i++)
     {
+        printf("Worker %d finished all the jobs\n",i);
         send_shutdown(&workers[i]);
     }
-    
-    return 4.0 * (double) global_count / (double) trials_done;
+    *next_job_io = next_job;
+    *cumulative_count += round_count;
+    *cumulative_trials += trials_done;
+
+    return 4.0 * (double) round_count / (double) trials_done;
 }
 
 int main(int argc, char *argv[]){
+    uint64_t cumulative_count = 0;
+    uint64_t cumulative_trials = 0;
+    int next_job_id = 0;
     user_input input;
     input = parse_args(argc,argv);
     int worker_num = input.num_workers;
@@ -198,7 +208,7 @@ int main(int argc, char *argv[]){
     }
     create_workers(workers,worker_num);
 
-    double pai = run_simulation(workers,&input);
+    double pai = run_simulation(workers, &input, &next_job_id, &cumulative_count, &cumulative_trials);
     for (int i = 0; i < worker_num; i++)
     {
         if (close(workers[i].from_worker_fd) < 0 || close(workers[i].to_worker_fd) < 0)
@@ -208,7 +218,66 @@ int main(int argc, char *argv[]){
         
     }
 
-    printf("Estimated pi = %f\n", pai);
+    printf("This round: pi = %f\n", pai);
+    printf("Cumulative: pi = %f (total trials %llu)\n", 4.0 * cumulative_count / cumulative_trials,
+           (unsigned long long)cumulative_trials);
+
+    for (;;) {
+        printf("Want to run again? (y/n): ");
+        fflush(stdout);
+        char answer;
+        if (scanf(" %c", &answer) != 1) {
+            break;
+        }
+        if (answer != 'y' && answer != 'Y' && answer != 'n' && answer != 'N') {
+            printf("Please enter y or n to run again or quit\n");
+            continue;
+        }
+        if (answer == 'n' || answer == 'N') {
+            break;
+        }
+        printf("Enter workers trials chunk_size: ");
+        unsigned long long t, c;
+        if (scanf("%d %llu %llu", &input.num_workers, &t, &c) != 3) {
+            printf("Please enter valid input\n");
+            continue;
+        }
+        input.trial_number = (uint64_t)t;
+        input.chunk_size = (uint64_t)c;
+        if (input.num_workers <= 0 || input.trial_number == 0 || input.chunk_size == 0) {
+            fprintf(stderr, "Invalid Input\n");
+            continue;
+        }
+        int ch;
+        while ((ch = getchar()) != '\n' && ch != EOF) {
+        }
+
+        for (int i = 0; i < worker_num; i++) {
+            waitpid(workers[i].pid, NULL, 0);
+        }
+        free(workers);
+
+        worker_num = input.num_workers;
+        workers = malloc(sizeof(worker_t) * worker_num);
+        if (workers == NULL) {
+            perror("malloc");
+            exit(1);
+        }
+        create_workers(workers, worker_num);
+        pai = run_simulation(workers, &input, &next_job_id, &cumulative_count, &cumulative_trials);
+        for (int i = 0; i < worker_num; i++) {
+            if (close(workers[i].from_worker_fd) < 0 || close(workers[i].to_worker_fd) < 0) {
+                perror("close");
+            }
+        }
+        printf("This round: pi = %f\n", pai);
+        printf("Cumulative: pi = %f (total trials %llu)\n", 4.0 * cumulative_count / cumulative_trials,
+               (unsigned long long)cumulative_trials);
+    }
+
+    for (int i = 0; i < worker_num; i++) {
+        waitpid(workers[i].pid, NULL, 0);
+    }
     free(workers);
 
     return 0;
