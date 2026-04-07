@@ -24,7 +24,7 @@ user_input parse_args(int argc,char* argv[]){
     input.num_workers = atoi(argv[1]);
     input.trial_number = strtoull(argv[2], NULL, 10);
     input.chunk_size = strtoull(argv[3], NULL, 10);
-    if(input.num_workers <=0 || input.chunk_size <=0 || input.trial_number<=0){
+    if(input.num_workers <=0 || input.chunk_size ==0 || input.trial_number==0){
         fprintf(stderr,"Invalid Input\n");
         exit(1);
     }
@@ -187,6 +187,27 @@ double run_simulation(worker_t *workers,user_input *input){
 int main(int argc, char *argv[]){
     user_input input;
     input = parse_args(argc,argv);
+    int worker_num = input.num_workers;
+    worker_t *workers = malloc(sizeof(worker_t) * worker_num);
+    if (workers == NULL)
+    {
+        perror("malloc");
+        exit(-1);
+    }
+    create_workers(workers,worker_num);
+
+    double pai = run_simulation(workers,&input);
+    for (int i = 0; i < worker_num; i++)
+    {
+        if (close(workers[i].from_worker_fd) < 0 || close(workers[i].to_worker_fd) < 0)
+        {
+            perror("close");
+        }
+        
+    }
+
+    printf("Estimated pi = %f\n", pai);
+    free(workers);
 
     return 0;
 }
