@@ -69,6 +69,7 @@ void worker_loop(int read_fd, int write_fd, int worker_id) {
         }
 
         // perform Monte Carlo simulation for this chunk
+        printf("Worker %d received job %d\n",worker_id,job.job_id);
         uint64_t inside = count_inside_circle(job.trials, job.random_seed);
 
         // package result to send back

@@ -152,6 +152,7 @@ double run_simulation(worker_t *workers,user_input *input){
         if(chunk > remaining){
             chunk = remaining;
         }
+        printf("Sending job %d to worker %d\n",next_job,i);
         send_job(&workers[i],chunk,next_job);
         next_job++;
         trials_sent += chunk;
@@ -170,9 +171,10 @@ double run_simulation(worker_t *workers,user_input *input){
             if(chunk > remaining){
                 chunk = remaining;
             }
+            printf("Worker %d finished previous job, sending chunk %d to the worker right now. Remaining trials is  %lld\n.",worker_id,next_job,remaining);
             send_job(&workers[worker_id],chunk,next_job);
-            next_job++;
             trials_sent += chunk;
+            next_job ++;
         }    
     }
 
