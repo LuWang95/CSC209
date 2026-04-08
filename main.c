@@ -58,6 +58,7 @@ void create_workers(worker_t *workers, int n)
         }
         if (pid == 0)
         {
+            free(workers);
             if (close(p2c[1]) < 0 || close(c2p[0]) < 0)
             {
                 perror("close");
