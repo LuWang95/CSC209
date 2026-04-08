@@ -46,8 +46,9 @@ uint64_t count_inside_circle(uint64_t trials, uint32_t seed) {
  * @param worker_id ID of this worker
  */
 void worker_loop(int read_fd, int write_fd, int worker_id) {
-    job_msg_type job;       
-    result_msg_type result; 
+    job_msg_type job;
+    /* Zero-init so write() does not copy uninitialized struct padding. */
+    result_msg_type result = {0};
 
     while (1) {
 

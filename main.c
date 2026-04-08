@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -89,7 +90,7 @@ void create_workers(worker_t *workers, int n)
 
 void send_job(worker_t *worker, uint64_t trial, int job_id)
 {
-    job_msg_type job;
+    job_msg_type job = {0};
     job.type = msg_job;
     job.random_seed = 42 + job_id * 11;
     job.trials = trial;
@@ -104,7 +105,7 @@ void send_job(worker_t *worker, uint64_t trial, int job_id)
 
 void send_shutdown(worker_t *worker)
 {
-    job_msg_type job;
+    job_msg_type job = {0};
     job.type = stop_job;
     job.job_id = -1;
     job.trials = 0;
