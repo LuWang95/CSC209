@@ -2,6 +2,7 @@
 #include <stdlib.h>  
 #include <unistd.h> 
 #include <stdint.h>  
+#include <errno.h>
 
 #include "worker.h"  
 #include "common.h"  
@@ -53,21 +54,51 @@ void worker_loop(int read_fd, int write_fd, int worker_id) {
         // read a full job message from parent
         ssize_t bytes_read = read_full(read_fd, &job, sizeof(job_msg_type));
 
-        // case 1: failed to read full message (error or partial read)
-        if (bytes_read != sizeof(job_msg_type)) {
+        // case 1: parent closed pipe cleanly
+        if (bytes_read == 0) {
+            close(read_fd);
+            close(write_fd);
+            _exit(0);
+        }
+        
+        // case 2: actual read error
+        if (bytes_read < 0) {
             perror("worker read job failed");
             close(read_fd);
             close(write_fd);
             _exit(1);
         }
-
-        // case 2: parent closed pipe or send stop signal (no more data)
-        if ((bytes_read == 0) || (job.type == stop_job)) {
+        
+        // case 3: partial / malformed message
+        if (bytes_read != (ssize_t)sizeof(job_msg_type)) {
+            fprintf(stderr, "worker received partial job message\n");
+            close(read_fd);
+            close(write_fd);
+            _exit(1);
+        }
+        
+        // case 4: explicit stop command
+        if (job.type == stop_job) {
             close(read_fd);
             close(write_fd);
             _exit(0);
         }
-
+        // case 5: normal job message
+        if (job.type != msg_job) {
+            fprintf(stderr, "worker received unknown job type %d\n", job.type);
+            close(read_fd);
+            close(write_fd);
+            _exit(1);
+        }
+        
+        // validate job payload
+        if (job.job_id < 0 || job.trials == 0) {
+            fprintf(stderr, "worker received invalid job payload\n");
+            close(read_fd);
+            close(write_fd);
+            _exit(1);
+        }        
+        
         // perform Monte Carlo simulation for this chunk
         printf("Worker %d received job %d\n",worker_id,job.job_id);
         uint64_t inside = count_inside_circle(job.trials, job.random_seed);
@@ -78,8 +109,12 @@ void worker_loop(int read_fd, int write_fd, int worker_id) {
         result.count = inside;            
 
         // send result back to parent
-        if (write_full(write_fd, &result, sizeof(result_msg_type)) != sizeof(result_msg_type)) {
-            perror("worker write result failed");
+        if (write_full(write_fd, &result, sizeof(result_msg_type)) != (ssize_t)sizeof(result_msg_type)) {
+            if (errno == EPIPE) {
+                fprintf(stderr, "worker write failed: parent closed result pipe\n");
+            } else {
+                perror("worker write result failed");
+            }
             close(read_fd);
             close(write_fd);
             _exit(1);
