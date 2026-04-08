@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -D_POSIX_C_SOURCE=200809L
+CFLAGS = -Wall -Wextra -std=c99 
 
 monte_carlo: main.o worker.o common.o
 	$(CC) $(CFLAGS) -o monte_carlo main.o worker.o common.o
