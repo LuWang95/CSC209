@@ -50,7 +50,18 @@ void create_workers(worker_t *workers, int n)
             exit(1);
         }
         if (pid == 0) {
+            for (int j = 0; j < i; j++)
+            {
+                if (close(workers[j].from_worker_fd)<0 || close(workers[j].to_worker_fd) < 0)
+                {
+                    perror("close");
+                    exit(1);
+                }
+                
+            }
+            
             free(workers);
+            
             /* child only reads jobs and writes results — close the other ends */
             if (close(p2c[1]) < 0 || close(c2p[0]) < 0) {
                 perror("close");
